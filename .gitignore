@@ -1,0 +1,8 @@
+[ ignore part ]
+data/*
+logs/*
+conf/*
+
+[ not ignore .gitkeep file ]
+!*/.gitkeep
+!conf/52explore

@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+# Description:
+# 
+# Publish related function
+# 1. cli_msg : 		used for cmd line message output.
+# 2. deploy_init: 	used for deployment initialize.
+# 3. deploy_codes: 	used for copy codes from backup place to web server's doc_root.
+# 4. deply_log:	 	used for record deployment logs. 
+# 
+# Author Terry
+# Date 2017-02-21
+
+#cmd line message prompt
+function cli_msg(){
+    printf "[$(date '+%Y-%m-%d %H:%M:%S')] %s\n" "$1"
+}
+
+#init deploy related things
+function deploy_init(){
+    # web server doucument check
+    [ ! -d $ws_document ] && mkdir -p $ws_document;
+	
+    # git check
+    if [ $(git config --global --list|wc -l) -eq 0 ]; then 		
+	git config --global user.name 	tkstorm
+	git config --global user.email 	tkstorm@163.com
+    fi
+
+    # deploy bakcup check
+    if [ ! -d "$deploy_backup" ]; then
+	mkdir -p $deploy_backup
+	git clone $git_origin $deploy_backup
+    fi
+}
+
+# rsync code to web server document from git backup code source
+function deploy_codes(){
+    cli_msg "rsync srouce code to web server..."
+    
+    #update newest codes
+    cd $deploy_backup && git pull &> /dev/null && cd - &> /dev/null || cli_msg "git pull fail !" 
+
+    # deploy code and log content
+    rsync -avhz \
+	--delete \
+	--exclude-from=$deploy_exclude \
+	"${deploy_backup}/" \
+	$ws_document
+
+    #deploy_log $(rsync -avhz --exclude-from=$deploy_exclude "${deploy_backup}/" $ws_document)
+}
+
+# deploy log record
+function deploy_log(){
+    # check whether exist
+    [ ! -e $deploy_log_file ] && touch $deploy_log_file  
+
+    # log deployment content
+    echo "------------------------------------" >> $deploy_log_file
+    echo $( date "+[%Y-%m-%d %H:%M:%S] - deploy content:") >> $deploy_log_file
+    echo "------------------------------------" >> $deploy_log_file
+
+    for line in $@ 
+    do
+	echo $line >> $deploy_log_file 
+    done;
+}
